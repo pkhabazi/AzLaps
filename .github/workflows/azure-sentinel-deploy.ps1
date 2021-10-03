@@ -39,7 +39,7 @@ function ConnectAzCloud {
 
     Clear-AzContext -Scope Process;
     Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue;
-    
+
     Add-AzEnvironment `
         -Name $CloudEnv `
         -ActiveDirectoryEndpoint $RawCreds.activeDirectoryEndpointUrl `
@@ -54,9 +54,9 @@ function ConnectAzCloud {
     Set-AzContext -Tenant $RawCreds.tenantId | out-null;
 }
 
-function IsValidTemplate($path) {
+function IsValidTemplate($object) {
     Try {
-        Test-AzResourceGroupDeployment -ResourceGroupName $ResourceGroupName -TemplateFile $path -workspace $WorkspaceName
+        Test-AzResourceGroupDeployment -ResourceGroupName $ResourceGroupName -TemplateObject $object -workspace $WorkspaceName
         return $true
     }
     Catch {
@@ -76,33 +76,33 @@ function IsRetryable($deploymentName) {
     }
 }
 
-function AttemptDeployment($path, $deploymentName) {
-    $isValid = IsValidTemplate $path
+
+function AttemptDeployment($object, $deploymentName) {
+    $isValid = IsValidTemplate $object
     if (-not $isValid) {
         return $false
     }
     $isSuccess = $false
     $currentAttempt = 0
-    While (($currentAttempt -lt $MaxRetries) -and (-not $isSuccess)) 
+    While (($currentAttempt -lt $MaxRetries) -and (-not $isSuccess))
     {
         $currentAttempt ++
-        Try 
+        Try
         {
-
-            New-AzResourceGroupDeployment -ResourceGroupName $ResourceGroupName -TemplateFile $path -workspace $workspaceName -ErrorAction Stop | Out-Host
+            New-AzResourceGroupDeployment -ResourceGroupName $ResourceGroupName -TemplateObject $object -workspace $workspaceName -ErrorAction Stop | Out-Host
             $isSuccess = $true
         }
-        Catch [Exception] 
+        Catch [Exception]
         {
             $error = $_
-            if (-not (IsRetryable $deploymentName)) 
+            if (-not (IsRetryable $deploymentName))
             {
                 Write-Host "[Warning] Failed to deploy $path with error: $error"
                 break
             }
-            else 
+            else
             {
-                if ($currentAttempt -le $MaxRetries) 
+                if ($currentAttempt -le $MaxRetries)
                 {
                     Write-Host "[Warning] Failed to deploy $path with error: $error. Retrying in $secondsBetweenAttempts seconds..."
                     Start-Sleep -Seconds $secondsBetweenAttempts
@@ -118,7 +118,7 @@ function AttemptDeployment($path, $deploymentName) {
 }
 
 function main() {
-    if ($CloudEnv -ne 'AzureCloud') 
+    if ($CloudEnv -ne 'AzureCloud')
     {
         Write-Output "Attempting Sign In to Azure Cloud"
         ConnectAzCloud
@@ -126,26 +126,42 @@ function main() {
 
     Write-Output "Starting Deployment for Files in path: $Directory"
 
-    if (Test-Path -Path $Directory) 
-    {
-        $totalFiles = 0;
-        $totalFailed = 0;
-        Get-ChildItem -Path $Directory -Recurse -Filter *.json |
-        ForEach-Object {
-            $totalFiles ++
-            $isSuccess = AttemptDeployment $_.FullName $_.Basename 
-            if (-not $isSuccess) 
-            {
-                $totalFailed++
+    # ARM Temlate basic
+    $template = @{
+        '$schema' = "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#"
+        contentVersion = "1.0.0.0"
+        Parameters = @{
+            Workspace = @{
+                type = "string"
             }
         }
-        if ($totalFiles -gt 0 -and $totalFailed -gt 0) 
+        resources = @()
+    }
+
+    if (Test-Path -Path $Directory)
+    {
+        $totalRules = 0;
+        $totalFailed = 0;
+
+        Get-ChildItem -Path $Directory -Recurse -Filter *.json  | ForEach-Object {
+            $totalRules ++
+            $template.resources += ($_ | Get-Content -Raw | ConvertFrom-Json -Depth 20 -AsHashtable | Select-Object resources).resources
+        }
+        $deploymentName = (Get-Date -Format ddMMyyyy)
+        $isSuccess = AttemptDeployment $template $deploymentName
+        if (-not $isSuccess)
         {
-            $error = "$totalFailed of $totalFiles deployments failed."
+            $totalFailed++
+        }
+
+
+        if ($totalRules -gt 0 -and $totalFailed -gt 0)
+        {
+            $error = "$totalFailed of $totalRules deployments failed."
             Throw $error
         }
     }
-    else 
+    else
     {
         Write-Output "[Warning] $Directory not found. nothing to deploy"
     }

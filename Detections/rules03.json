@@ -1,0 +1,60 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace": {
+            "type": "String"
+        }
+    },
+    "resources": [
+
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/6d7c178b-a95e-4def-825c-1dfa88beb92f')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/6d7c178b-a95e-4def-825c-1dfa88beb92f')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2021-03-01-preview",
+            "properties": {
+                "displayName": "test0101010202",
+                "description": "ewfwefwef",
+                "severity": "High",
+                "enabled": true,
+                "query": "SecurityEvent",
+                "queryFrequency": "PT5H",
+                "queryPeriod": "PT6H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 5,
+                "suppressionDuration": "PT1H",
+                "suppressionEnabled": false,
+                "tactics": [
+                    "Persistence",
+                    "LateralMovement"
+                ],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": false,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": {
+                    "alertDisplayNameFormat": "pmmmm",
+                    "alertDescriptionFormat": "pkmmmmm",
+                    "alertTacticsColumnName": "AdditionalInfo2",
+                    "alertSeverityColumnName": "AdditionalInfo"
+                },
+                "customDetails": null,
+                "entityMappings": null
+            }
+        }
+    ]
+}
