@@ -14,7 +14,7 @@
             "kind": "Scheduled",
             "apiVersion": "2021-03-01-preview",
             "properties": {
-                "displayName": "test0101",
+                "displayName": "test0101111111",
                 "description": "ewfwefwef",
                 "severity": "High",
                 "enabled": true,
