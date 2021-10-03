@@ -148,6 +148,7 @@ function main() {
             $template.resources += ($_ | Get-Content -Raw | ConvertFrom-Json -Depth 20 -AsHashtable | Select-Object resources).resources
         }
         $deploymentName = (Get-Date -Format ddMMyyyy)
+        Write-Host "$($template.resources.Count) rules to creat"
         $isSuccess = AttemptDeployment $template $deploymentName
         if (-not $isSuccess)
         {
